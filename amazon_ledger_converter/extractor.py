@@ -9,9 +9,34 @@ import os
 import pandas as pd
 
 logger = logging.getLogger(__name__)
-# logging.info("Program started")
-# logging.warning("Something may be wrong")
-# logging.error("Something failed")
+
+def provide_csv_path(csv_path=None):
+    """
+    Returns a valid file path to a file that is not empty.
+    If csv_path is provided, it validates and returns it.
+    Otherwise, prompts the user until a valid file path is provided.
+    """
+    if csv_path is not None:
+        if os.path.isfile(csv_path):
+            if os.path.getsize(csv_path) > 0:
+                return csv_path
+            else:
+                print(f"Error: The file '{csv_path}' is empty. Please try again.")
+                
+        else:
+            print(f"Error: The path '{csv_path}' does not point to a real file. Please try again.")
+
+    while True:
+        csv_path = input("Please enter the path to the CSV file: ")
+
+        if os.path.isfile(csv_path):
+            if os.path.getsize(csv_path) > 0:
+                return csv_path
+            else:
+                print(f"Error: The file '{csv_path}' is empty. Please try again.")
+        else:
+            print(f"Error: The path '{csv_path}' does not point to a real file. Please try again.")
+            
 
 def exttract_csv(
     filepath: str | Path,
