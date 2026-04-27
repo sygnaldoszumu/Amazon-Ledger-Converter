@@ -1,0 +1,8 @@
+
+* Work log
+**  Setup environment
+:LOGBOOK:
+CLOCK: [2026-04-27 Mon 14:43]
+CLOCK: [2026-04-27 Mon 13:30]--[2026-04-27 Mon 14:28] =>  0:58
+:END:
+
