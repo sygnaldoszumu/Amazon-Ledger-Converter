@@ -1,10 +1,11 @@
-from amazon_ledger_converter.path_validation import * 
+from amazon_ledger_converter.path_validation import *
+from amazon_ledger_converter.extration import *
 import argparse
 import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", nargs="?")  # optional positional
+    parser.add_argument("file", nargs="?")
     args = parser.parse_args()
 
     validators = [path_exists(), non_empty_file()]
@@ -12,9 +13,11 @@ def main():
     if args.file:
         if error := validate_chain(validators, args.file):
             sys.exit(error)
-        return args.file
+        file_path = args.file
     else:
-        return prompt_for_file(validators)
+        file_path = prompt_for_file(validators)
+
+    print(read_csv(file_path))
 
     
 
