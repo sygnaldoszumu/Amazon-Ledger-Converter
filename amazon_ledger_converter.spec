@@ -1,15 +1,34 @@
-# Add to COLLECT for Linux builds only
-import platform
+# amazon_ledger_converter.spec
+from PyInstaller.building.api import PYZ, EXE, COLLECT
+from PyInstaller.building.build_main import Analysis
 
-extra_datas = (
-    [("amazon-ledger-converter.desktop", ".")]
-    if platform.system() == "Linux"
-    else []
+a = Analysis(
+    ["main.py"],
+    pathex=[],
+    binaries=[],
+    datas=[],          # clients/ is external — nothing to bundle
+    hiddenimports=[
+        "openpyxl",    # often missed by PyInstaller's static analysis
+        "pandas",
+    ],
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,      # onedir: faster startup, easier to debug
+    name="amazon-ledger-converter",
+    console=True,               # keep console — the prompt needs it
+    strip=False,
 )
 
 coll = COLLECT(
     exe,
     a.binaries,
-    a.datas + extra_datas,
+    a.datas,
     name="amazon-ledger-converter",
 )
