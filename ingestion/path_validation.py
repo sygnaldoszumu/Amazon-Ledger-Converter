@@ -1,5 +1,5 @@
 import os
-from typing import Callable
+from collections.abc import Callable
 
 FileValidator = Callable[[str], str | None]  # returns error string or None
 
@@ -35,3 +35,20 @@ def prompt_for_file(validators: list[FileValidator], prompt_fn=input) -> str:
             return path
 
 
+
+def make_file_prompt(
+    label: str,
+    validators: list[FileValidator],
+    prompt_fn: Callable[[str], str] = input,
+) -> Callable[[], str]:
+    def prompt_for_file() -> str:
+        while True:
+            path = prompt_fn(f"Enter {label} file path: ").strip()
+
+            if error := validate_chain(validators, path):
+                print(error)
+                continue
+
+            return path
+
+    return prompt_for_file

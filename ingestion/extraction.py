@@ -7,5 +7,6 @@ class CSVFormat:
     encoding: str = "utf-8"
     extra: dict = field(default_factory=dict)
 
-def read_csv(path: str, fmt: CSVFormat = CSVFormat()) -> pd.DataFrame:
+def read_csv(path: str, fmt: CSVFormat | None = None) -> pd.DataFrame:
+    fmt = fmt or CSVFormat()
     return pd.read_csv(path, sep=fmt.separator, encoding=fmt.encoding, **fmt.extra)
