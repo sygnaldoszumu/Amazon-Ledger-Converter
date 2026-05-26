@@ -40,13 +40,19 @@ _DEFAULT_CACHE = _cache_path()
 # ---------------------------------------------------------------------------
 
 def _convert_date_format(date_str: str) -> str:
-    """Convert M/D/YYYY to YYYY-MM-DD."""
-    parts = date_str.strip().split('/')
-    if len(parts) != 3:
-        raise ValueError(
-            f"Invalid date format: '{date_str}'. Use M/D/YYYY format (e.g., 2/28/2026)"
-        )
-    return f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+    """Convert M/D/YYYY or DD.MM.YYYY to YYYY-MM-DD."""
+    s = date_str.strip()
+    if '/' in s:
+        parts = s.split('/')
+        if len(parts) == 3:
+            return f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+    elif '.' in s:
+        parts = s.split('.')
+        if len(parts) == 3:
+            return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+    raise ValueError(
+        f"Invalid date format: '{date_str}'. Use M/D/YYYY or DD.MM.YYYY format."
+    )
 
 
 def _is_weekend(date_iso: str) -> bool:
@@ -240,3 +246,12 @@ def get_exchange_rate(
 
     _write_to_cache(cache_file, from_curr, to_curr, requested_date, valid_date, rate)
     return rate
+
+
+if __name__ == "__main__":
+    rates = get_exchange_rate("USD", "PLN", "2/28/2026")
+    print(f"1 USD = {rates} PLN")
+    rates = get_exchange_rate("USD", "PLN", "28.02.2026")
+    print(f"1 USD = {rates} PLN")
+    rates = get_exchange_rate("USD", "PLN", "28.2.2026")
+    print(f"1 USD = {rates} PLN")
