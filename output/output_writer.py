@@ -19,11 +19,28 @@ Columns in the template header that have no data are left blank (None).
 
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.workbook import Workbook
+
+
+_DATE_PATTERNS = [
+    (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"), "%m/%d/%Y"),   # M/D/YYYY
+    (re.compile(r"^\d{4}-\d{2}-\d{2}$"),      "%Y-%m-%d"),   # YYYY-MM-DD
+]
+
+def _to_dd_mm_yyyy(value: str) -> str:
+    for pattern, fmt in _DATE_PATTERNS:
+        if pattern.match(value):
+            try:
+                return datetime.strptime(value, fmt).strftime("%d.%m.%Y")
+            except ValueError:
+                pass
+    return value
 
 
 _PASSTHROUGH_BUCKETS = {"other", "manual_review"}
@@ -134,6 +151,8 @@ def write_outputs_to_xlsx(
         for r_offset, (_, row) in enumerate(df[cols].iterrows()):
             for col_name, value in row.items():
                 cell_value = None if pd.isna(value) else value
+                if isinstance(cell_value, str):
+                    cell_value = _to_dd_mm_yyyy(cell_value)
                 ws.cell(
                     row=start_row + r_offset,
                     column=col_map[col_name],
