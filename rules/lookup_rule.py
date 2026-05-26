@@ -58,10 +58,29 @@ class LookupRule(Rule):
         p = Path(path)
         if not p.exists():
             raise FileNotFoundError(f"LookupRule: lookup file not found: {p}")
-        df = pd.read_csv(p, dtype=str)
+
+        if p.suffix.lower() in (".xlsx", ".xls"):
+            df = pd.read_excel(p, sheet_name=0, dtype=str)
+        else:
+            df = pd.read_csv(p, dtype=str)
+
+        df.columns = df.columns.str.strip()
+
         for col in self._lookup_key_columns:
+            if col not in df.columns:
+                raise KeyError(
+                    f"LookupRule: key column '{col}' not found in lookup file.\n"
+                    f"Available columns: {df.columns.tolist()}"
+                )
             df[col] = df[col].str.strip()
+
+        if value_col not in df.columns:
+            raise KeyError(
+                f"LookupRule: value column '{value_col}' not found in lookup file.\n"
+                f"Available columns: {df.columns.tolist()}"
+            )
         df[value_col] = df[value_col].str.strip()
+
         composite_key = df[self._lookup_key_columns].apply(
             lambda row: self._build_key(row.tolist()), axis=1
         )
