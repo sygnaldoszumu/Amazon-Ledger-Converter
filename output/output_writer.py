@@ -29,15 +29,18 @@ from openpyxl.workbook import Workbook
 
 
 _DATE_PATTERNS = [
-    (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"), "%m/%d/%Y"),   # M/D/YYYY
-    (re.compile(r"^\d{4}-\d{2}-\d{2}$"),      "%Y-%m-%d"),   # YYYY-MM-DD
+    (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"),    "%m/%d/%Y"),  # M/D/YYYY
+    (re.compile(r"^\d{4}-\d{2}-\d{2}$"),          "%Y-%m-%d"),  # YYYY-MM-DD
+    (re.compile(r"^\d{1,2}-\d{1,2}-\d{4}$"),      "%d-%m-%Y"),  # D-M-YYYY
+    (re.compile(r"^\d{1,2}\.\d{1,2}\.\d{4}$"),    "%d.%m.%Y"),  # D.M.YYYY
 ]
 
-def _to_dd_mm_yyyy(value: str) -> str:
+def _to_d_m_yyyy(value: str) -> str:
     for pattern, fmt in _DATE_PATTERNS:
         if pattern.match(value):
             try:
-                return datetime.strptime(value, fmt).strftime("%d.%m.%Y")
+                dt = datetime.strptime(value, fmt)
+                return f"{dt.day}.{dt.month}.{dt.year}"
             except ValueError:
                 pass
     return value
@@ -152,7 +155,7 @@ def write_outputs_to_xlsx(
             for col_name, value in row.items():
                 cell_value = None if pd.isna(value) else value
                 if isinstance(cell_value, str):
-                    cell_value = _to_dd_mm_yyyy(cell_value)
+                    cell_value = _to_d_m_yyyy(cell_value)
                 ws.cell(
                     row=start_row + r_offset,
                     column=col_map[col_name],

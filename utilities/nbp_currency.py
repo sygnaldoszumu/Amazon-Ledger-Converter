@@ -40,8 +40,8 @@ _DEFAULT_CACHE = _cache_path()
 # ---------------------------------------------------------------------------
 
 def _convert_date_format(date_str: str) -> str:
-    """Convert M/D/YYYY or DD.MM.YYYY to YYYY-MM-DD."""
-    s = date_str.strip()
+    """Convert M/D/YYYY, D.M.YYYY, or D-M-YYYY to YYYY-MM-DD. Strips any trailing time component."""
+    s = date_str.strip().split()[0]
     if '/' in s:
         parts = s.split('/')
         if len(parts) == 3:
@@ -50,8 +50,14 @@ def _convert_date_format(date_str: str) -> str:
         parts = s.split('.')
         if len(parts) == 3:
             return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+    elif '-' in s:
+        parts = s.split('-')
+        if len(parts) == 3:
+            if len(parts[0]) == 4:   # YYYY-MM-DD — already correct
+                return s
+            return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
     raise ValueError(
-        f"Invalid date format: '{date_str}'. Use M/D/YYYY or DD.MM.YYYY format."
+        f"Invalid date format: '{date_str}'. Use M/D/YYYY, D.M.YYYY, or D-M-YYYY."
     )
 
 
