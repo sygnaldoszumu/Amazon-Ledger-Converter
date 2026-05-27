@@ -21,11 +21,25 @@ class TransactionTypeConfig:
 
 
 @dataclass(frozen=True)
+class PromptedValueConfig:
+    name: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class PromptedFileConfig:
+    name: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class PipelineConfig:
     global_rules: tuple[RuleConfig, ...]
     transaction_types: dict[str, TransactionTypeConfig]
     config_dir: Path = field(default_factory=Path)
-    input_file: Path | None = None
+    input_file: Path | str | None = None          # str means a $ref to a prompted file
+    prompted_values: tuple[PromptedValueConfig, ...] = field(default_factory=tuple)
+    prompted_files: tuple[PromptedFileConfig, ...] = field(default_factory=tuple)
 
 
 # ---------------------------------------------------------------------------
@@ -108,8 +122,10 @@ def _parse_rule(rule: dict, config_dir: Path) -> RuleConfig:
     params = {k: v for k, v in rule.items() if k != "type"}
 
     # --- resolve lookup_file relative to the config directory ---------------
+    # $ref values are resolved later at runtime after the user is prompted.
     if rule_type == "lookup" and "lookup_file" in params:
-        params["lookup_file"] = _resolve_path(params["lookup_file"], config_dir)
+        if not str(params["lookup_file"]).startswith("$"):
+            params["lookup_file"] = _resolve_path(params["lookup_file"], config_dir)
 
     # --- resolve file-path raw inputs in compute rules ----------------------
     # A `raw` entry whose value points to an existing file (or looks like a
@@ -134,9 +150,27 @@ def _parse_transaction_type(name: str, block: dict, config_dir: Path) -> Transac
     )
 
 
+def _parse_prompted_list(raw: dict, key: str, cls) -> tuple:
+    entries = raw.get(key, [])
+    if not isinstance(entries, list):
+        raise ConfigValidationError(f"'{key}' must be a list.")
+    result = []
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or "name" not in entry:
+            raise ConfigValidationError(
+                f"{key}[{i}] must be a mapping with a 'name' key."
+            )
+        result.append(cls(name=entry["name"], description=entry.get("description", "")))
+    return tuple(result)
+
+
 def _parse_config(raw: dict, config_dir: Path) -> PipelineConfig:
     raw_input_file = raw.get("input_file")
-    input_file = Path(_resolve_path(raw_input_file, config_dir)) if raw_input_file else None
+    if raw_input_file:
+        input_file = raw_input_file if str(raw_input_file).startswith("$") \
+            else Path(_resolve_path(raw_input_file, config_dir))
+    else:
+        input_file = None
 
     return PipelineConfig(
         global_rules=tuple(_parse_rule(r, config_dir) for r in raw.get("global_rules", [])),
@@ -146,6 +180,8 @@ def _parse_config(raw: dict, config_dir: Path) -> PipelineConfig:
         },
         config_dir=config_dir,
         input_file=input_file,
+        prompted_values=_parse_prompted_list(raw, "prompted_values", PromptedValueConfig),
+        prompted_files=_parse_prompted_list(raw, "prompted_files", PromptedFileConfig),
     )
 
 

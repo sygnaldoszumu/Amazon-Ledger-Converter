@@ -1,0 +1,306 @@
+prompted_values:
+  - name: client_name
+    description: "Client name (used in the 'Client name' column of the output ledger)"
+
+prompted_files:
+  - name: ledger
+    description: "Amazon ledger CSV export (downloaded from Amazon Seller Central)"
+  - name: vat_numbers
+    description: "VAT numbers lookup file — CSV with columns: COUNTRY, VAT_NUMBER"
+  - name: price_index
+    description: "Product price list — XLSX (lista towarów) with columns: ASIN, Purchase price [PLN]"
+
+input_file: $ledger
+
+global_rules:
+  - type: conditional_routing
+    conditions:
+      - when:
+          column: DEPARTURE_COUNTRY
+          equals: PL
+        destination: "SALES LEDGER"
+      - when:
+          - column: ARRIVAL_COUNTRY
+            equals: PL
+          - column: DEPARTURE_COUNTRY
+            not_equals: PL
+        destination: "PURCHASES LEDGER"
+
+transaction_types:
+  "PURCHASES LEDGER":
+    output_destination: "PURCHASES LEDGER"
+    rules:
+      - type: ignore_if
+        field: TAX_REPORTING_SCHEME
+        equals: DEEMED_RESELLER
+      - type: ignore_if
+        field: TAX_REPORTING_SCHEME
+        equals: DEEMED_RESELLER-IOSS
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Invoice/CN/DN date"
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Delivery date"
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Date of payment reception"
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Receipt date (purchase transactions ONLY)"
+      - type: direct_mapping
+        source_column: TRANSACTION_EVENT_ID
+        target_column: "Invoice/CN/DN number"
+      - type: set_value
+        target_column: "Client name"
+        value: $client_name
+      - type: direct_mapping
+        source_column: DEPARTURE_COUNTRY
+        target_column: "VAT No. Country"
+      - type: lookup
+        key_columns: DEPARTURE_COUNTRY
+        lookup_file: $vat_numbers
+        lookup_key_columns: COUNTRY
+        lookup_value_column: VAT_NUMBER
+        target_column: "Client's VAT number"
+      - type: set_value
+        target_column: "Currency"
+        value: EUR
+      - type: set_value
+        target_column: "EX rate type NBP or ECB"
+        value: NBP
+      - type: lookup
+        key_columns: ASIN
+        lookup_file: $price_index
+        lookup_key_columns: ASIN
+        lookup_value_column: "Purchase price [PLN]"
+        target_column: "Net"
+      - type: set_value
+        target_column: VAT
+        value: 0
+      - type: lookup
+        key_columns: ASIN
+        lookup_file: $price_index
+        lookup_key_columns: ASIN
+        lookup_value_column: "Purchase price [PLN]"
+        target_column: "GROSS"
+      - type: compute
+        inputs:
+          - column: TRANSACTION_COMPLETE_DATE
+        func: get_valid_date
+        target_column: "Exchange rate date"
+      - type: compute
+        inputs:
+          - column: Currency
+          - raw: PLN
+          - column: TRANSACTION_COMPLETE_DATE
+        func: get_exchange_rate
+        target_column: "Exchange rate"
+      - type: compute
+        inputs:
+          - column: Net
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "NET in PLN"
+      - type: compute
+        inputs:
+          - column: VAT
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "VAT in PLN"
+      - type: compute
+        inputs:
+          - column: GROSS
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "GROSS in PLN"
+      - type: set_value
+        target_column: "VAT rate"
+        value: 0
+      - type: set_value
+        target_column: "Goods or service"
+        value: GOODS
+      - type: set_value
+        target_column: "KSEF specification"
+        value: DI
+      - type: set_value
+        target_column: "Type of transaction"
+        value: SALE
+      - type: set_value
+        target_column: "Transaction type"
+        value: OPT_TT_ICA
+      - type: direct_mapping
+        source_column: TRANSACTION_EVENT_ID
+        target_column: DOCUMENT_NUMBER
+
+  "SALES LEDGER":
+    output_destination: "SALES LEDGER"
+    rules:
+      - type: ignore_if
+        field: TAX_REPORTING_SCHEME
+        equals: DEEMED_RESELLER
+      - type: ignore_if
+        field: TAX_REPORTING_SCHEME
+        equals: DEEMED_RESELLER-IOSS
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Invoice/CN/DN date"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Delivery date"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Date of payment reception"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: direct_mapping
+        source_column: TRANSACTION_COMPLETE_DATE
+        target_column: "Receipt date (purchase transactions ONLY)"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: direct_mapping
+        source_column: TRANSACTION_EVENT_ID
+        target_column: "Invoice/CN/DN number"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "Client name"
+        value: $client_name
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: direct_mapping
+        source_column: ARRIVAL_COUNTRY
+        target_column: "VAT No. Country"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: lookup
+        key_columns: ARRIVAL_COUNTRY
+        lookup_file: $vat_numbers
+        lookup_key_columns: COUNTRY
+        lookup_value_column: VAT_NUMBER
+        target_column: "Client's VAT number"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: Currency
+        value: EUR
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "EX rate type NBP or ECB"
+        value: NBP
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: lookup
+        key_columns: ASIN
+        lookup_file: $price_index
+        lookup_key_columns: ASIN
+        lookup_value_column: "Purchase price [PLN]"
+        target_column: "Net"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: VAT
+        value: 0
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: lookup
+        key_columns: ASIN
+        lookup_file: $price_index
+        lookup_key_columns: ASIN
+        lookup_value_column: "Purchase price [PLN]"
+        target_column: "GROSS"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: compute
+        inputs:
+          - column: TRANSACTION_COMPLETE_DATE
+        func: get_valid_date
+        target_column: "Exchange rate date"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: compute
+        inputs:
+          - column: Currency
+          - raw: PLN
+          - column: TRANSACTION_COMPLETE_DATE
+        func: get_exchange_rate
+        target_column: "Exchange rate"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: compute
+        inputs:
+          - column: Net
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "NET in PLN"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: compute
+        inputs:
+          - column: VAT
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "VAT in PLN"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: compute
+        inputs:
+          - column: GROSS
+          - column: "Exchange rate"
+        func: multiply
+        target_column: "GROSS in PLN"
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "VAT rate"
+        value: 0
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "Goods or service"
+        value: GOODS
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "KSEF specification"
+        value: DI
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "Type of transaction"
+        value: SALES
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
+      - type: set_value
+        target_column: "Transaction type"
+        value: OPT_TT_ICS
+        when:
+          column: TRANSACTION_TYPE
+          equals: FC_TRANSFER
