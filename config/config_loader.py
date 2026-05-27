@@ -24,7 +24,8 @@ class TransactionTypeConfig:
 class PipelineConfig:
     global_rules: tuple[RuleConfig, ...]
     transaction_types: dict[str, TransactionTypeConfig]
-    config_dir: Path = field(default_factory=Path)   # ← new: absolute dir of the config file
+    config_dir: Path = field(default_factory=Path)
+    input_file: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +135,9 @@ def _parse_transaction_type(name: str, block: dict, config_dir: Path) -> Transac
 
 
 def _parse_config(raw: dict, config_dir: Path) -> PipelineConfig:
+    raw_input_file = raw.get("input_file")
+    input_file = Path(_resolve_path(raw_input_file, config_dir)) if raw_input_file else None
+
     return PipelineConfig(
         global_rules=tuple(_parse_rule(r, config_dir) for r in raw.get("global_rules", [])),
         transaction_types={
@@ -141,6 +145,7 @@ def _parse_config(raw: dict, config_dir: Path) -> PipelineConfig:
             for name, block in raw["transaction_types"].items()
         },
         config_dir=config_dir,
+        input_file=input_file,
     )
 
 

@@ -29,9 +29,10 @@ ComputeRule.register("sum", sum)
 ComputeRule.register("get_file_contents", get_file_contents)
 
 CONFIG_PATH = select_config()
-raw_data = read_csv(CONFIG_PATH.parent / "amazon_ledger.csv")
-
 config    = ConfigLoader().load(CONFIG_PATH)
+
+input_file = config.input_file or CONFIG_PATH.parent / "amazon_ledger.csv"
+raw_data = read_csv(input_file)
 registry  = RuleRegistry()
 factory   = PipelineFactory(registry)
 pipelines = factory.build_all(config)
