@@ -17,10 +17,8 @@ def _pick_file(title: str) -> str | None:
             title=title,
             initialdir=_last_dir,
             filetypes=[
+                ("CSV / Excel files", "*.csv *.xlsx *.xls"),
                 ("All files", "*.*"),
-                ("CSV files", "*.csv"),
-                ("Excel files", "*.xlsx *.xls"),
-                ("Text files", "*.txt"),
             ],
         )
         root.destroy()
