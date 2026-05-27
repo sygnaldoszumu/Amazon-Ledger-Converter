@@ -6,7 +6,10 @@ a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
-    datas=[],          # clients/ is external — nothing to bundle
+    datas=[
+        ("template.xlsx", "."),
+        ("default-config.yml", "."),
+    ],
     hiddenimports=[
         "openpyxl",    # often missed by PyInstaller's static analysis
         "pandas",
