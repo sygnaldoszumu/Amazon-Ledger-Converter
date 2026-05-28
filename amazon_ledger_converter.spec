@@ -7,8 +7,6 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ("template.xlsx", "."),
-        ("default-config.yml", "."),
     ],
     hiddenimports=[
         "openpyxl",    # often missed by PyInstaller's static analysis

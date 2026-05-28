@@ -38,7 +38,7 @@ ComputeRule.register("sum", sum)
 ComputeRule.register("get_file_contents", get_file_contents)
 
 try:
-    CONFIG_PATH = select_config_from_dir(_PROJECT_ROOT, _BUNDLE_DIR)
+    CONFIG_PATH = select_config_from_dir(_PROJECT_ROOT / "config", _PROJECT_ROOT)
     config    = ConfigLoader().load(CONFIG_PATH)
 
     all_refs = {
@@ -64,7 +64,7 @@ try:
 
     outputs = processor.process(raw_data)
 
-    TEMPLATE_PATH = _BUNDLE_DIR / "template.xlsx"
+    TEMPLATE_PATH = _PROJECT_ROOT / "config" / "template.xlsx"
 
     OUTPUT_PATH = input_file.parent / "output" / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     OUTPUT_PATH.parent.mkdir(exist_ok=True)
