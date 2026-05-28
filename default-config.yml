@@ -1,15 +1,14 @@
 prompted_values:
   - name: client_name
-    description: "Client name (used in the 'Client name' column of the output ledger)"
-
+    description: "Nazwa klienta (używana w kolumnie 'Nazwa klienta' w wynikowym rejestrze)"
 prompted_files:
   - name: ledger
-    description: "Amazon ledger CSV export (downloaded from Amazon Seller Central)"
+    description: "Eksport CSV księgi Amazon (pobrany z Amazon Seller Central)"
   - name: vat_numbers
-    description: "VAT numbers lookup file — CSV with columns: COUNTRY, VAT_NUMBER"
+    description: "Plik z numerami VAT — CSV z kolumnami: COUNTRY, VAT_NUMBER"
   - name: price_index
-    description: "Product price list — XLSX (lista towarów) with columns: ASIN, Purchase price [PLN]"
-
+    description: "Cennik produktów — XLSX (lista towarów) z kolumnami: ASIN, Purchase price [PLN]"
+    
 input_file: $ledger
 
 global_rules:
