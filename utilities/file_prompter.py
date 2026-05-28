@@ -31,7 +31,7 @@ def _pick_file(title: str) -> str | None:
 
 
 def _prompt_one(name: str, description: str) -> str:
-    header = f"Please select {name} file used for {description}" if description else f"Please select {name} file"
+    header = f"{description} : {name}" description else f"Please select {name} file"
     print(f"\n{header}")
     path = _pick_file(header)
     if path:
