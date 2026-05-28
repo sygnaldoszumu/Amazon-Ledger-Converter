@@ -23,10 +23,13 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.workbook import Workbook
 
+
+_DECIMAL_COMMA_RE = re.compile(r"^-?\d+,\d+$")
 
 _DATE_PATTERNS = [
     (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"),    "%m/%d/%Y"),  # M/D/YYYY
@@ -151,11 +154,21 @@ def write_outputs_to_xlsx(
         col_map = _resolve_col_map(ws, cols)   # {col_name: excel_col_index}
         start_row = ws.max_row + 1
 
-        for r_offset, (_, row) in enumerate(df[cols].iterrows()):
+        write_df = df[cols]
+        if bucket == "other":
+            write_df = write_df[~write_df.apply(
+                lambda r: all(v is None or (isinstance(v, float) and pd.isna(v)) or v == "" for v in r),
+                axis=1,
+            )]
+
+        for r_offset, (_, row) in enumerate(write_df.iterrows()):
             for col_name, value in row.items():
                 cell_value = None if pd.isna(value) else value
                 if isinstance(cell_value, str):
-                    cell_value = _to_d_m_yyyy(cell_value)
+                    if _DECIMAL_COMMA_RE.match(cell_value):
+                        cell_value = float(cell_value.replace(",", "."))
+                    else:
+                        cell_value = _to_d_m_yyyy(cell_value)
                 ws.cell(
                     row=start_row + r_offset,
                     column=col_map[col_name],
