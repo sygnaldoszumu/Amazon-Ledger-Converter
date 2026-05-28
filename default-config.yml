@@ -3,7 +3,7 @@ prompted_values:
     description: "Nazwa klienta (używana w kolumnie 'Nazwa klienta' w wynikowym rejestrze)"
 prompted_files:
   - name: ledger
-    description: "Eksport CSV księgi Amazon (pobrany z Amazon Seller Central)"
+    description: "Eksport CSV księgi tranzakchj Amazon"
   - name: vat_numbers
     description: "Plik z numerami VAT — CSV z kolumnami: COUNTRY, VAT_NUMBER"
   - name: price_index
