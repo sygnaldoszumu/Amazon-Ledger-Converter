@@ -29,7 +29,7 @@ from openpyxl import load_workbook
 from openpyxl.workbook import Workbook
 
 
-_DECIMAL_COMMA_RE = re.compile(r"^-?\d+,\d+$")
+_NUMERIC_STRING_RE = re.compile(r"^-?(?:0|[1-9]\d*)([.,]\d+)?$")
 
 _DATE_PATTERNS = [
     (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"),    "%m/%d/%Y"),  # M/D/YYYY
@@ -165,8 +165,10 @@ def write_outputs_to_xlsx(
             for col_name, value in row.items():
                 cell_value = None if pd.isna(value) else value
                 if isinstance(cell_value, str):
-                    if _DECIMAL_COMMA_RE.match(cell_value):
-                        cell_value = float(cell_value.replace(",", "."))
+                    cell_value = cell_value.strip()
+                    if _NUMERIC_STRING_RE.match(cell_value):
+                        num = float(cell_value.replace(",", "."))
+                        cell_value = int(num) if num.is_integer() else num
                     else:
                         cell_value = _to_d_m_yyyy(cell_value)
                 ws.cell(
