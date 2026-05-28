@@ -5,9 +5,11 @@ import sys
 from pathlib import Path
 
 if getattr(sys, "frozen", False):
-    _PROJECT_ROOT = Path(sys.executable).parent
+    _PROJECT_ROOT = Path(sys.executable).parent   # next to the exe — user files live here
+    _BUNDLE_DIR   = Path(sys._MEIPASS)            # _internal/ — bundled data files live here
 else:
     _PROJECT_ROOT = Path(__file__).parent
+    _BUNDLE_DIR   = Path(__file__).parent
 
 from config.config_loader import *
 from pipeline.pipeline_factory import *
@@ -35,7 +37,7 @@ ComputeRule.register("multiply", multiply)
 ComputeRule.register("sum", sum)
 ComputeRule.register("get_file_contents", get_file_contents)
 
-CONFIG_PATH = select_config_from_dir(_PROJECT_ROOT)
+CONFIG_PATH = select_config_from_dir(_PROJECT_ROOT, _BUNDLE_DIR)
 config    = ConfigLoader().load(CONFIG_PATH)
 
 all_refs = {
@@ -105,7 +107,7 @@ def get_mapped_columns(config, destination: str) -> list[str]:
  
  
 
-TEMPLATE_PATH = _PROJECT_ROOT / "template.xlsx"
+TEMPLATE_PATH = _BUNDLE_DIR / "template.xlsx"
 
 OUTPUT_PATH = input_file.parent / "output" / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
 OUTPUT_PATH.parent.mkdir(exist_ok=True)

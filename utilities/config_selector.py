@@ -80,18 +80,25 @@ def _prompt_user(configs: list[Path]) -> Path:
         print(f"  Please enter a number between 0 and {len(configs) - 1}.")
 
 
-def select_config_from_dir(directory: Path) -> Path:
+def select_config_from_dir(*directories: Path) -> Path:
     """
-    Find all .yml / .yaml files directly in *directory*.
+    Find all .yml / .yaml files in the given directories.
+    Files with the same name are deduplicated (first directory wins).
     Return the single match immediately, or prompt with a numbered menu if there are several.
     Exits with an error if no config files are found.
     """
-    configs = sorted(
-        p for p in directory.iterdir()
-        if p.is_file() and p.suffix.lower() in (".yml", ".yaml")
-    )
+    seen_names: set[str] = set()
+    configs: list[Path] = []
+    for directory in directories:
+        if not directory.exists():
+            continue
+        for p in sorted(directory.iterdir()):
+            if p.is_file() and p.suffix.lower() in (".yml", ".yaml") and p.name not in seen_names:
+                seen_names.add(p.name)
+                configs.append(p)
+    configs.sort(key=lambda p: p.name)
     if not configs:
-        print(f"ERROR: no .yml/.yaml files found in {directory}.", file=sys.stderr)
+        print("ERROR: no .yml/.yaml config files found.", file=sys.stderr)
         sys.exit(1)
     if len(configs) == 1:
         print(f"Using config: {configs[0].name}")
