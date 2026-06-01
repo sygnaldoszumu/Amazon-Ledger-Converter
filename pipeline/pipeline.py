@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from rules.base import Rule, RuleResult
-from rules.validation_utils import matches, is_invalid
+from rules.validation_utils import matches
 
 
 @dataclass(frozen=True)
@@ -24,10 +24,9 @@ class Pipeline:
     """
     Runs an ordered list of rules against a row.
     Fail-fast: stops at the first failed rule.
-    After each rule, checks explicitly mapped output columns for empty values.
-    After all rules, does a final check that every output column was set.
     Returns only mapped output columns in transformed_row.
-    Internal columns (prefixed with _) are excluded from all checks.
+    Internal columns (prefixed with _) are excluded from the output.
+    Use required_fields rules to enforce that specific columns are non-empty.
     """
 
     def __init__(
@@ -39,17 +38,6 @@ class Pipeline:
         self._rules = rules
         self._output_destination = output_destination
         self._output_columns = output_columns or set()
-
-    def _check_output_columns(self, row: dict, rule_name: str) -> PipelineResult | None:
-        for key in self._output_columns:
-            if key.startswith("_"):
-                continue
-            if key in row and is_invalid(row[key]):
-                return PipelineResult.fail(
-                    reason=f"Rule '{rule_name}' produced empty value for '{key}'.",
-                    failed_rule_type=rule_name,
-                )
-        return None
 
     def execute(self, row: dict) -> PipelineResult:
         for rule, when_condition in self._rules:
@@ -64,21 +52,14 @@ class Pipeline:
                     failed_rule_type=type(rule).__name__,
                 )
 
-            failure = self._check_output_columns(row, type(rule).__name__)
-            if failure:
-                return failure
-
-        # final check — ensure every output column was set by some rule
-        for key in self._output_columns:
-            if key.startswith("_"):
-                continue
-            if key not in row or is_invalid(row.get(key)):
-                return PipelineResult.fail(
-                    reason=f"Output column '{key}' is empty or was never set.",
-                    failed_rule_type="Pipeline",
-                )
+        transformed_row = {k: v for k, v in row.items() if k in self._output_columns}
+        if not transformed_row:
+            return PipelineResult.fail(
+                reason="No output columns were produced (all mapping rules were skipped).",
+                failed_rule_type="Pipeline",
+            )
 
         return PipelineResult.ok(
             output_destination=self._output_destination,
-            transformed_row={k: v for k, v in row.items() if k in self._output_columns},
+            transformed_row=transformed_row,
         )
