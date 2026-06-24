@@ -161,7 +161,11 @@ def _resolve_valid_date(requested_date: str, cache: dict) -> Optional[str]:
 
 def get_valid_date(date: str, cache_file: Path = _DEFAULT_CACHE) -> str:
     """
-    Return the closest working day on or before the given date.
+    Return the closest working day strictly before the given date.
+
+    Per Polish accounting rules the exchange rate is taken from the last
+    NBP-published working day *preceding* the date of sale, so the search
+    starts one day before the requested date — never the date itself.
     Checks the cache first — if any entry exists for this requested_date,
     the valid_date is already known and no HTTP call is made.
 
@@ -170,16 +174,17 @@ def get_valid_date(date: str, cache_file: Path = _DEFAULT_CACHE) -> str:
         cache_file: Path to CSV cache file
 
     Returns:
-        Closest valid working day in YYYY-MM-DD format.
+        Closest valid working day before the requested date, in YYYY-MM-DD format.
     """
     requested_date = _convert_date_format(date)
     cache = _read_cache(cache_file)
 
     cached_valid = _resolve_valid_date(requested_date, cache)
     if cached_valid:
+        print(f"Cached valid date: {cached_valid}")
         return cached_valid
-
-    candidate = requested_date
+    candidate = _prev_day(requested_date)
+    
     now = datetime.now()
 
     for _ in range(30):
@@ -188,6 +193,7 @@ def get_valid_date(date: str, cache_file: Path = _DEFAULT_CACHE) -> str:
             candidate = _prev_day(candidate)
             continue
         if _has_nbp_data(candidate):
+            print(f"New valid date: {candidate}")
             return candidate
         candidate = _prev_day(candidate)
 
@@ -222,17 +228,20 @@ def get_exchange_rate(
 
     # ── full cache hit: rate already known ───────────────────────────────────
     if cache_key in cache:
-        return cache[cache_key]["rate"]
+        rate = cache[cache_key]["rate"]
+        print(f"Used cached rate from: {cache_key}, rate is {rate}")
+        return rate
 
     # ── partial hit: valid date already known, skip NBP date check ──────────
     cached_valid = _resolve_valid_date(requested_date, cache)
     if cached_valid:
         valid_date = cached_valid
+        orig = datetime.strptime(requested_date, "%Y-%m-%d").strftime("%Y/%m/%d")
     else:
         valid_date = get_valid_date(date, cache_file)
         if valid_date != requested_date:
-            orig = datetime.strptime(requested_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            used = datetime.strptime(valid_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            orig = datetime.strptime(requested_date, "%Y-%m-%d").strftime("%Y/%m/%d")
+            used = datetime.strptime(valid_date, "%Y-%m-%d").strftime("%Y/%m/%d")
             print(f"Note: {orig} had no data, using {used} instead")
 
     # ── fetch rates from NBP ─────────────────────────────────────────────────
@@ -251,6 +260,8 @@ def get_exchange_rate(
         rate = round(from_rate / to_rate, 4)
 
     _write_to_cache(cache_file, from_curr, to_curr, requested_date, valid_date, rate)
+    print(f"Used new rate from: {cache_key}, rate is {rate}")
+
     return rate
 
 
